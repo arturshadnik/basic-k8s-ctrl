@@ -2,19 +2,19 @@
 # This file is used to track the info used to scaffold your project
 # and allow the plugins properly work.
 # More info: https://book.kubebuilder.io/reference/project-config.html
-domain: k8s.arturshadnik
+domain: arturshadnik.k8s.io
 layout:
 - go.kubebuilder.io/v4
 projectName: basic-k8s-ctrl
-repo: k8s.arturshadnik/clusterscan
+repo: basic-k8s-ctrl
 resources:
 - api:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: k8s.arturshadnik
-  group: spectrocloud
+  domain: arturshadnik.k8s.io
+  group: scan
   kind: ClusterScan
-  path: k8s.arturshadnik/clusterscan/api/v1
+  path: basic-k8s-ctrl/api/v1
   version: v1
 version: "3"

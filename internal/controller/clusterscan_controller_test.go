@@ -1,5 +1,5 @@
 /*
-Copyright 2024.
+Copyright 2024 arturshadnik.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	spectrocloudv1 "k8s.arturshadnik/clusterscan/api/v1"
+	scanv1 "basic-k8s-ctrl/api/v1"
 )
 
 var _ = Describe("ClusterScan Controller", func() {
@@ -40,13 +40,13 @@ var _ = Describe("ClusterScan Controller", func() {
 			Name:      resourceName,
 			Namespace: "default", // TODO(user):Modify as needed
 		}
-		clusterscan := &spectrocloudv1.ClusterScan{}
+		clusterscan := &scanv1.ClusterScan{}
 
 		BeforeEach(func() {
 			By("creating the custom resource for the Kind ClusterScan")
 			err := k8sClient.Get(ctx, typeNamespacedName, clusterscan)
 			if err != nil && errors.IsNotFound(err) {
-				resource := &spectrocloudv1.ClusterScan{
+				resource := &scanv1.ClusterScan{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: "default",
@@ -59,7 +59,7 @@ var _ = Describe("ClusterScan Controller", func() {
 
 		AfterEach(func() {
 			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &spectrocloudv1.ClusterScan{}
+			resource := &scanv1.ClusterScan{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 

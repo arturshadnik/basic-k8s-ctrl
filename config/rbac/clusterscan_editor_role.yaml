@@ -8,7 +8,7 @@ metadata:
   name: clusterscan-editor-role
 rules:
 - apiGroups:
-  - spectrocloud.k8s.arturshadnik
+  - scan.arturshadnik.k8s.io
   resources:
   - clusterscans
   verbs:
@@ -20,7 +20,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - spectrocloud.k8s.arturshadnik
+  - scan.arturshadnik.k8s.io
   resources:
   - clusterscans/status
   verbs:

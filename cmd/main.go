@@ -1,5 +1,5 @@
 /*
-Copyright 2024.
+Copyright 2024 arturshadnik.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -34,8 +34,8 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	spectrocloudv1 "k8s.arturshadnik/clusterscan/api/v1"
-	"k8s.arturshadnik/clusterscan/internal/controller"
+	scanv1 "basic-k8s-ctrl/api/v1"
+	"basic-k8s-ctrl/internal/controller"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -47,7 +47,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	utilruntime.Must(spectrocloudv1.AddToScheme(scheme))
+	utilruntime.Must(scanv1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -104,7 +104,7 @@ func main() {
 		WebhookServer:          webhookServer,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "fda2aa51.k8s.arturshadnik",
+		LeaderElectionID:       "cb15d53e.arturshadnik.k8s.io",
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly

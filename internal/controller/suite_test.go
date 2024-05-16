@@ -1,5 +1,5 @@
 /*
-Copyright 2024.
+Copyright 2024 arturshadnik.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	spectrocloudv1 "k8s.arturshadnik/clusterscan/api/v1"
+	scanv1 "basic-k8s-ctrl/api/v1"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -72,7 +72,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	err = spectrocloudv1.AddToScheme(scheme.Scheme)
+	err = scanv1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:scheme

@@ -1,5 +1,5 @@
 /*
-Copyright 2024.
+Copyright 2024 arturshadnik.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	spectrocloudv1 "k8s.arturshadnik/clusterscan/api/v1"
+	scanv1 "basic-k8s-ctrl/api/v1"
 )
 
 // ClusterScanReconciler reconciles a ClusterScan object
@@ -33,9 +33,9 @@ type ClusterScanReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=spectrocloud.k8s.arturshadnik,resources=clusterscans,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=spectrocloud.k8s.arturshadnik,resources=clusterscans/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=spectrocloud.k8s.arturshadnik,resources=clusterscans/finalizers,verbs=update
+//+kubebuilder:rbac:groups=scan.arturshadnik.k8s.io,resources=clusterscans,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=scan.arturshadnik.k8s.io,resources=clusterscans/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=scan.arturshadnik.k8s.io,resources=clusterscans/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -57,6 +57,6 @@ func (r *ClusterScanReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 // SetupWithManager sets up the controller with the Manager.
 func (r *ClusterScanReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&spectrocloudv1.ClusterScan{}).
+		For(&scanv1.ClusterScan{}).
 		Complete(r)
 }

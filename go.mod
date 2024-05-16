@@ -1,4 +1,4 @@
-module k8s.arturshadnik/clusterscan
+module basic-k8s-ctrl
 
 go 1.21
 

@@ -1,5 +1,5 @@
 /*
-Copyright 2024.
+Copyright 2024 arturshadnik.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"k8s.arturshadnik/clusterscan/test/utils"
+	"basic-k8s-ctrl/test/utils"
 )
 
 const namespace = "basic-k8s-ctrl-system"
