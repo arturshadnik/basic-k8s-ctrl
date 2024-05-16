@@ -27,15 +27,15 @@ import (
 type ClusterScanSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	JobType       string            `json:"jobType,omitempty"`
-	Image         string            `json:"image,omitempty"`
-	Command       []string          `json:"command,omitempty"`
-	Args          []string          `json:"args,omitempty"`
-	Schedule      string            `json:"schedule,omitempty"`
-	OneOff        bool              `json:"oneOff,omitempty"`
-	ScanConfig    map[string]string `json:"scanConfig,omitempty"`
-	Deadline      int               `json:"deadline,omitempty"`
-	RestartPolicy string            `json:"restartPolicy"`
+	JobType                 string            `json:"jobType,omitempty"`
+	Image                   string            `json:"image,omitempty"`
+	Command                 []string          `json:"command,omitempty"`
+	Args                    []string          `json:"args,omitempty"`
+	Schedule                string            `json:"schedule,omitempty"`
+	OneOff                  bool              `json:"oneOff,omitempty"`
+	ScanConfig              map[string]string `json:"scanConfig,omitempty"`
+	StartingDeadlineSeconds int               `json:"startingDeadlineSeconds,omitempty"`
+	RestartPolicy           string            `json:"restartPolicy"`
 }
 
 // ClusterScanStatus defines the observed state of ClusterScan

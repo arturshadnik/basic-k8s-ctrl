@@ -15,5 +15,5 @@ spec:
   scanConfig:
     scanLevel: "deep"
     targetNamespaces: ["default"]
-  deadline: 3600 # time limit
+  startingDeadlineSeconds: 3600 # allowed waittime if scheduled time is missed
   restartPolicy: "OnFailure"
