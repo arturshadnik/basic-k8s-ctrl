@@ -6,4 +6,14 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: clusterscan-sample
 spec:
-  # TODO(user): Add fields here
+  jobType: "monitoring"
+  image: "arturshadnik/example:latest"
+  command: ["./run.sh"]
+  args: ["--example"]
+  schedule: "0 0 * * 1" # run weekly, monday at midnight
+  oneOff: false # if true, schedule can be omitted
+  scanConfig:
+    scanLevel: "deep"
+    targetNamespaces: ["default"]
+  deadline: 3600 # time limit
+  restartPolicy: "OnFailure"

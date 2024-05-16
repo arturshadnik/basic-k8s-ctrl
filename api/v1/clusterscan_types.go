@@ -27,15 +27,43 @@ import (
 type ClusterScanSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of ClusterScan. Edit clusterscan_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	JobType       string            `json:"jobType,omitempty"`
+	Image         string            `json:"image,omitempty"`
+	Command       []string          `json:"command,omitempty"`
+	Args          []string          `json:"args,omitempty"`
+	Schedule      string            `json:"schedule,omitempty"`
+	OneOff        bool              `json:"oneOff,omitempty"`
+	ScanConfig    map[string]string `json:"scanConfig,omitempty"`
+	Deadline      int               `json:"deadline,omitempty"`
+	RestartPolicy string            `json:"restartPolicy"`
 }
 
 // ClusterScanStatus defines the observed state of ClusterScan
 type ClusterScanStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	Phase                string           `json:"phase,omitempty"`
+	StartTime            metav1.Time      `json:"startTime,omitempty"`
+	CompletionTime       metav1.Time      `json:"completionTime,omitempty"`
+	Active               int              `json:"active,omitempty"`
+	Succeeded            int              `json:"succeeded,omitempty"`
+	Failed               int              `json:"failed,omitempty"`
+	LastExecutionDetails ExecutionDetails `json:"executionDetails,omitempty"`
+	NextScheduledTime    metav1.Time      `json:"nextScheduledTime,omitempty"`
+	ErrorMessage         string           `json:"errorMessage,omitempty"`
+	Conditions           []Conditions     `json:"Conditions,omitempty"`
+}
+
+type ExecutionDetails struct {
+	StartTime      metav1.Time `json:"startTime,omitempty"`
+	CompletionTime metav1.Time `json:"completionTime,omitempty"`
+	Result         string      `json:"result,omitempty"`
+}
+
+type Conditions struct {
+	Type               string      `json:"type,omitempty"`
+	Status             bool        `json:"status,omitempty"`
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
 }
 
 //+kubebuilder:object:root=true
