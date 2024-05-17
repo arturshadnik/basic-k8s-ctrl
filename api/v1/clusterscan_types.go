@@ -52,7 +52,7 @@ type ClusterScanStatus struct {
 	LastExecutionDetails ExecutionDetails       `json:"executionDetails,omitempty"`
 	NextScheduledTime    metav1.Time            `json:"nextScheduledTime,omitempty"`
 	ErrorMessage         string                 `json:"errorMessage,omitempty"`
-	Conditions           []batchv1.JobCondition `json:"Conditions,omitempty"`
+	Conditions           []batchv1.JobCondition `json:"conditions,omitempty"`
 }
 
 type ExecutionDetails struct {

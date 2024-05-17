@@ -72,7 +72,12 @@ spec:
           status:
             description: ClusterScanStatus defines the observed state of ClusterScan
             properties:
-              Conditions:
+              active:
+                type: integer
+              completionTime:
+                format: date-time
+                type: string
+              conditions:
                 items:
                   description: JobCondition describes current state of a job.
                   properties:
@@ -103,11 +108,6 @@ spec:
                   - type
                   type: object
                 type: array
-              active:
-                type: integer
-              completionTime:
-                format: date-time
-                type: string
               errorMessage:
                 type: string
               executionDetails:
