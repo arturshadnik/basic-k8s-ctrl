@@ -8,7 +8,7 @@ metadata:
   name: clusterscan-viewer-role
 rules:
 - apiGroups:
-  - scan.arturshadnik.k8s.io
+  - scan.arturshadnik.io
   resources:
   - clusterscans
   verbs:
@@ -16,7 +16,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - scan.arturshadnik.k8s.io
+  - scan.arturshadnik.io
   resources:
   - clusterscans/status
   verbs:

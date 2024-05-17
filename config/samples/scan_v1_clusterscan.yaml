@@ -1,4 +1,4 @@
-apiVersion: scan.arturshadnik.k8s.io/v1
+apiVersion: scan.arturshadnik.io/v1
 kind: ClusterScan
 metadata:
   labels:

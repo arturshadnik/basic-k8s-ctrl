@@ -8,7 +8,7 @@ metadata:
   name: clusterscan-editor-role
 rules:
 - apiGroups:
-  - scan.arturshadnik.k8s.io
+  - scan.arturshadnik.io
   resources:
   - clusterscans
   verbs:
@@ -20,7 +20,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - scan.arturshadnik.k8s.io
+  - scan.arturshadnik.io
   resources:
   - clusterscans/status
   verbs:

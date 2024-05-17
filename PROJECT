@@ -2,7 +2,7 @@
 # This file is used to track the info used to scaffold your project
 # and allow the plugins properly work.
 # More info: https://book.kubebuilder.io/reference/project-config.html
-domain: arturshadnik.k8s.io
+domain: arturshadnik.io
 layout:
 - go.kubebuilder.io/v4
 projectName: basic-k8s-ctrl
@@ -12,7 +12,7 @@ resources:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: arturshadnik.k8s.io
+  domain: arturshadnik.io
   group: scan
   kind: ClusterScan
   path: basic-k8s-ctrl/api/v1

@@ -39,9 +39,9 @@ type ClusterScanReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=scan.arturshadnik.k8s.io,resources=clusterscans,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=scan.arturshadnik.k8s.io,resources=clusterscans/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=scan.arturshadnik.k8s.io,resources=clusterscans/finalizers,verbs=update
+//+kubebuilder:rbac:groups=scan.arturshadnik.io,resources=clusterscans,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=scan.arturshadnik.io,resources=clusterscans/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=scan.arturshadnik.io,resources=clusterscans/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
