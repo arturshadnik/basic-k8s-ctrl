@@ -79,7 +79,7 @@ spec:
                       format: date-time
                       type: string
                     status:
-                      type: boolean
+                      type: string
                     type:
                       type: string
                   type: object

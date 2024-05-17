@@ -62,7 +62,7 @@ type ExecutionDetails struct {
 
 type Conditions struct {
 	Type               string      `json:"type,omitempty"`
-	Status             bool        `json:"status,omitempty"`
+	Status             string      `json:"status,omitempty"`
 	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
 }
 
