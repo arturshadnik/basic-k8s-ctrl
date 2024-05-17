@@ -1,8 +1,14 @@
 # basic-k8s-ctrl
-// TODO(user): Add simple overview of use/purpose
+This is a simple Kubernetes CRD and controller for reconciling k8s Job and CronJob resources with 1 abstract interface.
 
 ## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+The ClusterScan CRD acts as a common interface for submitting both one-off and scheduled jobs to a Kubernetes cluster.
+
+The ClusterScan Spec incldues data such as Job Spec, Schedule and Job Type. The ClusterScan Status captures metadata such as number of successfull and failed Job runs, JobConditions and more.
+
+The reconciler loop consists of 2 workflows - 1 for each type of job. 
+- The Job reconciler either submits the new Job to the cluster, or updates ClusterScan status to succeeded or failed - depending on the outcome of the submitted job.
+- The CronJob reconciler either creates the scheduled jobs on the cluster, or updates ClusterScan with the results of the last execution. This includes appending the JobCondition, updating LastExecutionDetails and incrementing the Success and Failure counters.
 
 ## Getting Started
 
@@ -90,7 +96,7 @@ kubectl apply -f https://raw.githubusercontent.com/<org>/basic-k8s-ctrl/<tag or 
 ```
 
 ## Contributing
-// TODO(user): Add detailed information on how you would like others to contribute to this project
+This project is currently not accepting PRs. Feel free to fork it and work on your own additions.
 
 **NOTE:** Run `make help` for more information on all potential `make` targets
 
