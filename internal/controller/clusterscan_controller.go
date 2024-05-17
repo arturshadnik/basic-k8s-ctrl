@@ -80,7 +80,7 @@ func (r *ClusterScanReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			return ctrl.Result{}, err
 
 		} else if err != nil { // case where job does not exist
-			l.Info("Creating one-off job %s", jobMeta.Name)
+			l.Info("Creating one-off job")
 
 			err = r.submitJob(ctx, clusterScan, jobMeta, job)
 			if err != nil {
@@ -109,7 +109,7 @@ func (r *ClusterScanReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			return ctrl.Result{}, err
 
 		} else if err != nil { // case where cron hasnt been created
-			l.Info("Scheduling cron job %s", jobMeta.Name)
+			l.Info("Scheduling cron job")
 
 			err = r.submitCronJob(ctx, clusterScan, jobMeta, job)
 			if err != nil {
