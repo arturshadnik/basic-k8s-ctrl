@@ -17,6 +17,7 @@ limitations under the License.
 package v1
 
 import (
+	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -42,28 +43,22 @@ type ClusterScanSpec struct {
 type ClusterScanStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Phase                string           `json:"phase,omitempty"`
-	StartTime            metav1.Time      `json:"startTime,omitempty"`
-	CompletionTime       metav1.Time      `json:"completionTime,omitempty"`
-	Active               int              `json:"active,omitempty"`
-	Succeeded            int              `json:"succeeded,omitempty"`
-	Failed               int              `json:"failed,omitempty"`
-	LastExecutionDetails ExecutionDetails `json:"executionDetails,omitempty"`
-	NextScheduledTime    metav1.Time      `json:"nextScheduledTime,omitempty"`
-	ErrorMessage         string           `json:"errorMessage,omitempty"`
-	Conditions           []Conditions     `json:"Conditions,omitempty"`
+	Phase                string                 `json:"phase,omitempty"`
+	StartTime            metav1.Time            `json:"startTime,omitempty"`
+	CompletionTime       metav1.Time            `json:"completionTime,omitempty"`
+	Active               int                    `json:"active,omitempty"`
+	Succeeded            int                    `json:"succeeded,omitempty"`
+	Failed               int                    `json:"failed,omitempty"`
+	LastExecutionDetails ExecutionDetails       `json:"executionDetails,omitempty"`
+	NextScheduledTime    metav1.Time            `json:"nextScheduledTime,omitempty"`
+	ErrorMessage         string                 `json:"errorMessage,omitempty"`
+	Conditions           []batchv1.JobCondition `json:"Conditions,omitempty"`
 }
 
 type ExecutionDetails struct {
 	StartTime      metav1.Time `json:"startTime,omitempty"`
 	CompletionTime metav1.Time `json:"completionTime,omitempty"`
 	Result         string      `json:"result,omitempty"`
-}
-
-type Conditions struct {
-	Type               string      `json:"type,omitempty"`
-	Status             string      `json:"status,omitempty"`
-	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
 }
 
 //+kubebuilder:object:root=true
