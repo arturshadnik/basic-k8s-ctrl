@@ -53,10 +53,6 @@ type ClusterScanReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.3/pkg/reconcile
 
-type JobLike struct {
-	job client.Object
-}
-
 func (r *ClusterScanReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	l := log.FromContext(ctx)
 
@@ -92,14 +88,14 @@ func (r *ClusterScanReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 				return ctrl.Result{}, err
 			}
 
-			err := r.updateJobStatus(ctx, clusterScan, job)
+			err := r.updateClusterScanStatus(ctx, clusterScan, job)
 			if err != nil {
 				l.Error(err, "Failed to update ClusterScan status")
 				return ctrl.Result{}, err
 			}
 
 		} else { // job status updated
-			err = r.updateJobStatus(ctx, clusterScan, job)
+			err = r.updateClusterScanStatus(ctx, clusterScan, job)
 			if err != nil {
 				l.Error(err, "Failed to update ClusterScan status")
 				return ctrl.Result{}, err
@@ -122,14 +118,30 @@ func (r *ClusterScanReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 			clusterScan.Status.Phase = "Scheduled"
 			clusterScan.Status.StartTime = metav1.Now()
-			r.Status().Update(ctx, clusterScan)
-
-		} else { // cron running, update status
-
+			err = r.Status().Update(ctx, clusterScan)
+			if err != nil {
+				log.Log.Error(err, "Failed to update ClusterScan status")
+				return ctrl.Result{}, err
+			}
 		}
 
-	}
+		jobList := &batchv1.JobList{}
+		labelSelector := client.MatchingLabels{"clusterscan": clusterScan.Name}
 
+		err = r.Client.List(ctx, jobList, labelSelector)
+		if err != nil {
+			log.Log.Error(err, "Failed to update ClusterScan status")
+			return ctrl.Result{}, err
+		}
+
+		for _, job := range jobList.Items {
+			err = r.updateClusterScanStatus(ctx, clusterScan, &job)
+			if err != nil {
+				log.Log.Error(err, "Failed to update ClusterScan status")
+				return ctrl.Result{}, err
+			}
+		}
+	}
 	return ctrl.Result{}, nil
 }
 
@@ -203,7 +215,7 @@ func (r *ClusterScanReconciler) createPodTemplate(scan *scanv1.ClusterScan) core
 	}
 }
 
-func (r *ClusterScanReconciler) updateJobStatus(ctx context.Context, scan *scanv1.ClusterScan, job *batchv1.Job) error {
+func (r *ClusterScanReconciler) updateClusterScanStatus(ctx context.Context, scan *scanv1.ClusterScan, job *batchv1.Job) error {
 	if len(job.Status.Conditions) == 0 { // initial phase
 		scan.Status.StartTime = metav1.Now()
 		scan.Status.Phase = "Running"
@@ -213,8 +225,8 @@ func (r *ClusterScanReconciler) updateJobStatus(ctx context.Context, scan *scanv
 		if batchv1.JobConditionType(c.Type) == batchv1.JobComplete && corev1.ConditionStatus(c.Status) == corev1.ConditionTrue {
 			scan.Status.Phase = "Succeeded"
 			scan.Status.CompletionTime = metav1.Now()
-			scan.Status.Succeeded = int(job.Status.Succeeded)
-			scan.Status.Failed = int(job.Status.Failed)
+			scan.Status.Succeeded += int(job.Status.Succeeded)
+			scan.Status.Failed += int(job.Status.Failed)
 			scan.Status.LastExecutionDetails = scanv1.ExecutionDetails{
 				StartTime:      *job.Status.StartTime,
 				CompletionTime: c.LastTransitionTime,
