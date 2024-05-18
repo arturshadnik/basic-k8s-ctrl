@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -73,117 +74,116 @@ func (r *ClusterScanReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	if clusterScan.Spec.OneOff {
-		job := &batchv1.Job{}
-
-		err = r.Get(ctx, client.ObjectKey{Name: jobName, Namespace: jobNamespace}, job)
-		if err != nil && client.IgnoreNotFound(err) != nil { // case where job cannot be retrieved for  any reason
+		err = r.reconcileJob(ctx, clusterScan, jobMeta, l)
+		if err != nil {
 			return ctrl.Result{}, err
-
-		} else if err != nil { // case where job does not exist
-			l.Info("Creating one-off job")
-
-			err = r.submitJob(ctx, clusterScan, jobMeta, job)
-			if err != nil {
-				l.Error(err, "Failed to submit job")
-				return ctrl.Result{}, err
-			}
-
-			err := r.updateClusterScanStatus(ctx, clusterScan, job)
-			if err != nil {
-				l.Error(err, "Failed to update ClusterScan status")
-				return ctrl.Result{}, err
-			}
-
-		} else { // job status updated
-			err = r.updateClusterScanStatus(ctx, clusterScan, job)
-			if err != nil {
-				l.Error(err, "Failed to update ClusterScan status")
-				return ctrl.Result{}, err
-			}
 		}
 
 	} else {
-		job := &batchv1.CronJob{}
-		err = r.Get(ctx, client.ObjectKey{Name: jobName, Namespace: jobNamespace}, job)
-		if err != nil && client.IgnoreNotFound(err) != nil { // case where job cannot be retrieved for  any reason
-			return ctrl.Result{}, err
-
-		} else if err != nil { // case where cron hasnt been created
-			l.Info("Scheduling cron job")
-
-			err = r.submitCronJob(ctx, clusterScan, jobMeta, job)
-			if err != nil {
-				return ctrl.Result{}, err
-			}
-
-			clusterScan.Status.Phase = "Scheduled"
-			clusterScan.Status.StartTime = metav1.Now()
-			err = r.Status().Update(ctx, clusterScan)
-			if err != nil {
-				log.Log.Error(err, "Failed to update ClusterScan status")
-				return ctrl.Result{}, err
-			}
-		}
-
-		jobList := &batchv1.JobList{}
-		labelSelector := client.MatchingLabels{"clusterscan": clusterScan.Name}
-
-		err = r.Client.List(ctx, jobList, labelSelector)
+		err = r.reconcileCronJob(ctx, clusterScan, jobMeta, l)
 		if err != nil {
-			log.Log.Error(err, "Failed to update ClusterScan status")
 			return ctrl.Result{}, err
-		}
-
-		for _, job := range jobList.Items {
-			err = r.updateClusterScanStatus(ctx, clusterScan, &job)
-			if err != nil {
-				log.Log.Error(err, "Failed to update ClusterScan status")
-				return ctrl.Result{}, err
-			}
 		}
 	}
 	return ctrl.Result{}, nil
 }
 
 // Helpers
-func (r *ClusterScanReconciler) submitJob(ctx context.Context, scan *scanv1.ClusterScan, meta metav1.ObjectMeta, job *batchv1.Job) error {
-	job = r.createJob(scan, meta)
+func (r *ClusterScanReconciler) reconcileJob(ctx context.Context, scan *scanv1.ClusterScan, meta metav1.ObjectMeta, l logr.Logger) error {
+	job := &batchv1.Job{}
 
-	err := r.Create(ctx, job)
-	if err != nil {
+	err := r.Get(ctx, client.ObjectKey{Name: meta.Name, Namespace: meta.Namespace}, job)
+	if err != nil && client.IgnoreNotFound(err) != nil { // case where job cannot be retrieved for  any reason
 		return err
-	}
-	if err := controllerutil.SetControllerReference(scan, job, r.Scheme); err != nil {
-		return err
+
+	} else if err != nil { // case where job does not exist
+		l.Info("Creating one-off job")
+
+		err = r.submitJob(ctx, scan, meta, *job)
+		if err != nil {
+			l.Error(err, "Failed to submit job")
+			return err
+		}
+
+		err := r.updateClusterScanStatus(ctx, scan, job)
+		if err != nil {
+			l.Error(err, "Failed to update ClusterScan status")
+			return err
+		}
+
+	} else { // job status updated
+		err = r.updateClusterScanStatus(ctx, scan, job)
+		if err != nil {
+			l.Error(err, "Failed to update ClusterScan status")
+			return err
+		}
 	}
 	return nil
 }
 
-func (r *ClusterScanReconciler) submitCronJob(ctx context.Context, scan *scanv1.ClusterScan, meta metav1.ObjectMeta, job *batchv1.CronJob) error {
-	job = r.createCronJob(scan, meta)
+func (r *ClusterScanReconciler) reconcileCronJob(ctx context.Context, scan *scanv1.ClusterScan, meta metav1.ObjectMeta, l logr.Logger) error {
+	job := &batchv1.CronJob{}
+	err := r.Get(ctx, client.ObjectKey{Name: meta.Name, Namespace: meta.Namespace}, job)
+	if err != nil && client.IgnoreNotFound(err) != nil { // case where job cannot be retrieved for  any reason
+		return err
 
-	err := r.Create(ctx, job)
+	} else if err != nil { // case where cron hasnt been created
+		l.Info("Scheduling cron job")
+
+		err = r.submitCronJob(ctx, scan, meta, *job)
+		if err != nil {
+			return err
+		}
+
+		scan.Status.Phase = "Scheduled"
+		scan.Status.StartTime = metav1.Now()
+		err = r.Status().Update(ctx, scan)
+		if err != nil {
+			log.Log.Error(err, "Failed to update ClusterScan status")
+			return err
+		}
+	}
+
+	jobList := &batchv1.JobList{}
+	labelSelector := client.MatchingLabels{"clusterscan": scan.Name}
+
+	err = r.Client.List(ctx, jobList, labelSelector)
 	if err != nil {
+		log.Log.Error(err, "Failed to update ClusterScan status")
 		return err
 	}
-	if err := controllerutil.SetControllerReference(scan, job, r.Scheme); err != nil {
-		return err
+
+	for _, job := range jobList.Items {
+		err = r.updateClusterScanStatus(ctx, scan, &job)
+		if err != nil {
+			log.Log.Error(err, "Failed to update ClusterScan status")
+			return err
+		}
 	}
 	return nil
 }
 
-func (r *ClusterScanReconciler) createJob(scan *scanv1.ClusterScan, meta metav1.ObjectMeta) *batchv1.Job {
-	return &batchv1.Job{
+func (r *ClusterScanReconciler) submitJob(ctx context.Context, scan *scanv1.ClusterScan, meta metav1.ObjectMeta, job batchv1.Job) error {
+	job = batchv1.Job{
 		ObjectMeta: meta,
 		Spec: batchv1.JobSpec{
 			Template:     r.createPodTemplate(scan),
 			BackoffLimit: ptr.To(int32(1)),
 		},
 	}
+
+	err := r.Create(ctx, &job)
+	if err != nil {
+		return err
+	}
+	if err := controllerutil.SetControllerReference(scan, &job, r.Scheme); err != nil {
+		return err
+	}
+	return nil
 }
 
-func (r *ClusterScanReconciler) createCronJob(scan *scanv1.ClusterScan, meta metav1.ObjectMeta) *batchv1.CronJob {
-	return &batchv1.CronJob{
+func (r *ClusterScanReconciler) submitCronJob(ctx context.Context, scan *scanv1.ClusterScan, meta metav1.ObjectMeta, job batchv1.CronJob) error {
+	job = batchv1.CronJob{
 		ObjectMeta: meta,
 		Spec: batchv1.CronJobSpec{
 			Schedule: scan.Spec.Schedule,
@@ -194,6 +194,14 @@ func (r *ClusterScanReconciler) createCronJob(scan *scanv1.ClusterScan, meta met
 			},
 		},
 	}
+	err := r.Create(ctx, &job)
+	if err != nil {
+		return err
+	}
+	if err := controllerutil.SetControllerReference(scan, &job, r.Scheme); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *ClusterScanReconciler) createPodTemplate(scan *scanv1.ClusterScan) corev1.PodTemplateSpec {
@@ -247,7 +255,6 @@ func (r *ClusterScanReconciler) updateClusterScanStatus(ctx context.Context, sca
 			scan.Status.Conditions = append(scan.Status.Conditions, c)
 		}
 	}
-
 	return r.Status().Update(ctx, scan)
 }
 
