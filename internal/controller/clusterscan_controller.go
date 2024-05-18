@@ -94,6 +94,7 @@ func (r *ClusterScanReconciler) reconcileJob(ctx context.Context, scan *scanv1.C
 
 	err := r.Get(ctx, client.ObjectKey{Name: meta.Name, Namespace: meta.Namespace}, job)
 	if err != nil && client.IgnoreNotFound(err) != nil { // case where job cannot be retrieved for  any reason
+		l.Error(err, "Something went wrong!")
 		return err
 
 	} else if err != nil { // case where job does not exist
@@ -104,6 +105,7 @@ func (r *ClusterScanReconciler) reconcileJob(ctx context.Context, scan *scanv1.C
 			l.Error(err, "Failed to submit job")
 			return err
 		}
+		l.Info("Started Job")
 
 		err := r.updateClusterScanStatus(ctx, scan, job)
 		if err != nil {
@@ -111,12 +113,13 @@ func (r *ClusterScanReconciler) reconcileJob(ctx context.Context, scan *scanv1.C
 			return err
 		}
 
-	} else { // job status updated
+	} else if scan.Status.Phase != "Succeeded" { // job status updated
 		err = r.updateClusterScanStatus(ctx, scan, job)
 		if err != nil {
 			l.Error(err, "Failed to update ClusterScan status")
 			return err
 		}
+		l.Info("Updated ClusterScan", "startedAt", job.Status.StartTime.Time.GoString(), "scanStatus", scan.Status.Phase)
 	}
 	return nil
 }
@@ -125,6 +128,7 @@ func (r *ClusterScanReconciler) reconcileCronJob(ctx context.Context, scan *scan
 	job := &batchv1.CronJob{}
 	err := r.Get(ctx, client.ObjectKey{Name: meta.Name, Namespace: meta.Namespace}, job)
 	if err != nil && client.IgnoreNotFound(err) != nil { // case where job cannot be retrieved for  any reason
+		l.Error(err, "Something went wrong")
 		return err
 
 	} else if err != nil { // case where cron hasnt been created
@@ -134,7 +138,7 @@ func (r *ClusterScanReconciler) reconcileCronJob(ctx context.Context, scan *scan
 		if err != nil {
 			return err
 		}
-
+		l.Info("Cron Scheduled")
 		scan.Status.Phase = "Scheduled"
 		scan.Status.StartTime = metav1.Now()
 		err = r.Status().Update(ctx, scan)
@@ -166,6 +170,7 @@ func (r *ClusterScanReconciler) reconcileCronJob(ctx context.Context, scan *scan
 			log.Log.Error(err, "Failed to update ClusterScan status")
 			return err
 		}
+		l.Info(fmt.Sprintf("Added %v Cron results to ClusterScan", len(filteredJobs)))
 	}
 	return nil
 }
