@@ -1,0 +1,20 @@
+apiVersion: scan.arturshadnik.io/v1
+kind: ClusterScan
+metadata:
+  labels:
+    app.kubernetes.io/name: basic-k8s-ctrl
+    app.kubernetes.io/managed-by: kustomize
+  name: hello-hello
+spec:
+  jobType: "testing"
+  image: "busybox"
+  command: ["echo", "Hello World"]
+  # args: ["--example"]
+  schedule: "0 0 * * 1" # run weekly, monday at midnight
+  oneOff: true # if true, schedule can be omitted
+  scanConfig:
+    scanLevel: "deep"
+    targetNamespaces: "default"
+  startingDeadlineSeconds: 3600 # allowed waittime if scheduled time is missed
+  restartPolicy: "OnFailure"
+
