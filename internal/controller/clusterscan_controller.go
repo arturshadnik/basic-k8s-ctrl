@@ -243,30 +243,32 @@ func (r *ClusterScanReconciler) updateClusterScanStatus(ctx context.Context, sca
 	} else {
 		c := job.Status.Conditions[len(job.Status.Conditions)-1]
 		if batchv1.JobConditionType(c.Type) == batchv1.JobComplete && corev1.ConditionStatus(c.Status) == corev1.ConditionTrue {
-			scan.Status.Phase = "Succeeded"
-			scan.Status.CompletionTime = metav1.Now()
+			if scan.Spec.OneOff {
+				scan.Status.Phase = "Succeeded"
+			}
 			scan.Status.Succeeded += int(job.Status.Succeeded)
 			scan.Status.Failed += int(job.Status.Failed)
-			if job.Status.CompletionTime.Time.After(scan.Status.CompletionTime.Time) {
+			if job.Status.CompletionTime.Time.After(scan.Status.LastExecutionDetails.CompletionTime.Time) {
 				// only update when the job happened after the last recorded one
 				scan.Status.LastExecutionDetails = scanv1.ExecutionDetails{
 					StartTime:      *job.Status.StartTime,
 					CompletionTime: c.LastTransitionTime,
-					Result:         "Completed successfully",
+					Result:         "Succeeded",
 				}
 			}
 			scan.Status.Conditions = append(scan.Status.Conditions, c)
 
 		} else if batchv1.JobConditionType(c.Type) == batchv1.JobFailed && corev1.ConditionStatus(c.Status) == corev1.ConditionTrue {
-			scan.Status.Phase = "Failed"
-			scan.Status.CompletionTime = metav1.Now()
+			if scan.Spec.OneOff {
+				scan.Status.Phase = "Failed"
+			}
 			scan.Status.Succeeded = int(job.Status.Succeeded)
 			scan.Status.Failed = int(job.Status.Failed)
-			if job.Status.CompletionTime.Time.After(scan.Status.CompletionTime.Time) {
+			if job.Status.CompletionTime.Time.After(scan.Status.LastExecutionDetails.CompletionTime.Time) {
 				scan.Status.LastExecutionDetails = scanv1.ExecutionDetails{
 					StartTime:      *job.Status.StartTime,
 					CompletionTime: c.LastTransitionTime,
-					Result:         "Execution failed",
+					Result:         "Failed",
 				}
 				scan.Status.Conditions = append(scan.Status.Conditions, c)
 			}

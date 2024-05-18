@@ -120,7 +120,6 @@ func (in *ClusterScanSpec) DeepCopy() *ClusterScanSpec {
 func (in *ClusterScanStatus) DeepCopyInto(out *ClusterScanStatus) {
 	*out = *in
 	in.StartTime.DeepCopyInto(&out.StartTime)
-	in.CompletionTime.DeepCopyInto(&out.CompletionTime)
 	in.LastExecutionDetails.DeepCopyInto(&out.LastExecutionDetails)
 	in.NextScheduledTime.DeepCopyInto(&out.NextScheduledTime)
 	if in.Conditions != nil {

@@ -45,7 +45,6 @@ type ClusterScanStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
 	Phase                string                 `json:"phase,omitempty"`
 	StartTime            metav1.Time            `json:"startTime,omitempty"`
-	CompletionTime       metav1.Time            `json:"completionTime,omitempty"`
 	Active               int                    `json:"active,omitempty"`
 	Succeeded            int                    `json:"succeeded,omitempty"`
 	Failed               int                    `json:"failed,omitempty"`

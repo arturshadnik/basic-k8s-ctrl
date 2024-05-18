@@ -74,9 +74,6 @@ spec:
             properties:
               active:
                 type: integer
-              completionTime:
-                format: date-time
-                type: string
               conditions:
                 items:
                   description: JobCondition describes current state of a job.
