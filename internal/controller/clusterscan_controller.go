@@ -153,8 +153,15 @@ func (r *ClusterScanReconciler) reconcileCronJob(ctx context.Context, scan *scan
 		return err
 	}
 
+	filteredJobs := []*batchv1.Job{}
+	// filter jobs that are already accounted for, using CompletionTime
 	for _, job := range jobList.Items {
-		err = r.updateClusterScanStatus(ctx, scan, &job)
+		if job.Status.CompletionTime != nil && !job.Status.CompletionTime.Time.After(scan.Status.LastExecutionDetails.CompletionTime.Time) {
+			filteredJobs = append(filteredJobs, &job)
+		}
+	}
+	for _, job := range filteredJobs {
+		err = r.updateClusterScanStatus(ctx, scan, job)
 		if err != nil {
 			log.Log.Error(err, "Failed to update ClusterScan status")
 			return err
@@ -235,10 +242,13 @@ func (r *ClusterScanReconciler) updateClusterScanStatus(ctx context.Context, sca
 			scan.Status.CompletionTime = metav1.Now()
 			scan.Status.Succeeded += int(job.Status.Succeeded)
 			scan.Status.Failed += int(job.Status.Failed)
-			scan.Status.LastExecutionDetails = scanv1.ExecutionDetails{
-				StartTime:      *job.Status.StartTime,
-				CompletionTime: c.LastTransitionTime,
-				Result:         "Completed successfully",
+			if job.Status.CompletionTime.Time.After(scan.Status.CompletionTime.Time) {
+				// only update when the job happened after the last recorded one
+				scan.Status.LastExecutionDetails = scanv1.ExecutionDetails{
+					StartTime:      *job.Status.StartTime,
+					CompletionTime: c.LastTransitionTime,
+					Result:         "Completed successfully",
+				}
 			}
 			scan.Status.Conditions = append(scan.Status.Conditions, c)
 
@@ -247,12 +257,14 @@ func (r *ClusterScanReconciler) updateClusterScanStatus(ctx context.Context, sca
 			scan.Status.CompletionTime = metav1.Now()
 			scan.Status.Succeeded = int(job.Status.Succeeded)
 			scan.Status.Failed = int(job.Status.Failed)
-			scan.Status.LastExecutionDetails = scanv1.ExecutionDetails{
-				StartTime:      *job.Status.StartTime,
-				CompletionTime: c.LastTransitionTime,
-				Result:         "Completed successfully",
+			if job.Status.CompletionTime.Time.After(scan.Status.CompletionTime.Time) {
+				scan.Status.LastExecutionDetails = scanv1.ExecutionDetails{
+					StartTime:      *job.Status.StartTime,
+					CompletionTime: c.LastTransitionTime,
+					Result:         "Execution failed",
+				}
+				scan.Status.Conditions = append(scan.Status.Conditions, c)
 			}
-			scan.Status.Conditions = append(scan.Status.Conditions, c)
 		}
 	}
 	return r.Status().Update(ctx, scan)
