@@ -79,7 +79,6 @@ func (r *ClusterScanReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	if clusterScan.Spec.OneOff {
-		l.Info("Reconciling One-off")
 		err = r.reconcileJob(ctx, clusterScan, jobMeta, l)
 		if err != nil {
 			l.Error(err, "Failed to reconcile job")
@@ -87,7 +86,6 @@ func (r *ClusterScanReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 
 	} else {
-		l.Info("Reconciling Cron")
 		err = r.reconcileCronJob(ctx, clusterScan, jobMeta, l)
 
 		if err != nil {
@@ -110,7 +108,6 @@ func (r *ClusterScanReconciler) reconcileJob(ctx context.Context, scan *scanv1.C
 
 		}
 		// case where job does not exist
-		l.Info("Creating one-off job")
 
 		err = r.submitJob(ctx, scan, meta, *job)
 		if err != nil {
@@ -121,6 +118,10 @@ func (r *ClusterScanReconciler) reconcileJob(ctx context.Context, scan *scanv1.C
 
 		scan.Status.StartTime = metav1.Now()
 		scan.Status.Phase = "Running"
+		err = r.Status().Update(ctx, scan)
+		if err != nil {
+			return err
+		}
 
 	} else { // job status updated
 		err = r.updateClusterScanStatus(ctx, scan, job)
@@ -142,7 +143,6 @@ func (r *ClusterScanReconciler) reconcileCronJob(ctx context.Context, scan *scan
 			l.Error(err, "Something went wrong")
 			return err
 		} // case where cron hasnt been created
-		l.Info("Scheduling cron job")
 
 		err = r.submitCronJob(ctx, scan, meta, *job)
 		if err != nil {
@@ -152,14 +152,17 @@ func (r *ClusterScanReconciler) reconcileCronJob(ctx context.Context, scan *scan
 
 		scan.Status.Phase = "Scheduled"
 		scan.Status.StartTime = metav1.Now()
-
+		scan.Status.LastExecutionDetails = scanv1.ExecutionDetails{
+			CompletionTime: metav1.Now(),
+			StartTime:      metav1.Now(),
+			Result:         "dummy",
+		}
 		err = r.Status().Update(ctx, scan)
 		if err != nil {
 			log.Log.Error(err, "Failed to update ClusterScan status")
 			return err
 		}
 	}
-
 	jobList := &batchv1.JobList{}
 	labelSelector := client.MatchingLabels{"clusterscan": scan.Name}
 
@@ -168,15 +171,16 @@ func (r *ClusterScanReconciler) reconcileCronJob(ctx context.Context, scan *scan
 		log.Log.Error(err, "Failed to update ClusterScan status")
 		return err
 	}
-
+	l.Info("NumJobs", "num", len(jobList.Items))
 	filteredJobs := []*batchv1.Job{}
 	// filter jobs that are already accounted for, using CompletionTime
 	for _, job := range jobList.Items {
-		if job.Status.CompletionTime != nil && !job.Status.CompletionTime.Time.After(scan.Status.LastExecutionDetails.CompletionTime.Time) {
+		if job.Status.CompletionTime != nil && !job.Status.StartTime.Time.After(scan.Status.LastExecutionDetails.StartTime.Time) {
+			l.Info("Time", "job-time", job.Status.StartTime.GoString(), "scan-time", scan.Status.LastExecutionDetails.StartTime.Time.GoString())
 			filteredJobs = append(filteredJobs, &job)
-
 		}
 	}
+	// TODO check why the HECK these never update properly, could be the time check above. Step 0, check length
 	for _, job := range filteredJobs {
 		err = r.updateClusterScanStatus(ctx, scan, job)
 		if err != nil {
