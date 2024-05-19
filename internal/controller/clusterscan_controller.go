@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -43,6 +44,7 @@ type ClusterScanReconciler struct {
 //+kubebuilder:rbac:groups=scan.arturshadnik.io,resources=clusterscans,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=scan.arturshadnik.io,resources=clusterscans/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=scan.arturshadnik.io,resources=clusterscans/finalizers,verbs=update
+//+kubebuilder:rbac:groups=batch,resources=jobs;cronjobs,verbs=create;delete;get;list;patch;update;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -56,13 +58,19 @@ type ClusterScanReconciler struct {
 
 func (r *ClusterScanReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	l := log.FromContext(ctx)
-
+	l.Info("In the reconciler")
 	clusterScan := &scanv1.ClusterScan{}
 
 	err := r.Get(ctx, req.NamespacedName, clusterScan)
 	if err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+
+	if clusterScan.Status.Phase == "Succeeded" || clusterScan.Status.Phase == "Failed" {
+		return ctrl.Result{}, nil
+	}
+
+	l.Info("We got one", "scan", clusterScan.Spec.JobType)
 
 	jobName := fmt.Sprintf("%s-job", clusterScan.Name)
 	jobNamespace := clusterScan.Namespace
@@ -73,15 +81,24 @@ func (r *ClusterScanReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		Labels:    map[string]string{"clusterscan": clusterScan.Name},
 	}
 
+	l.Info("meta:", "name", jobName, "namespace", jobNamespace)
+
 	if clusterScan.Spec.OneOff {
+		l.Info("Reconciling One-off")
 		err = r.reconcileJob(ctx, clusterScan, jobMeta, l)
 		if err != nil {
+			l.Info("error", "error", err)
+
 			return ctrl.Result{}, err
 		}
 
 	} else {
+		l.Info("Reconciling Cron")
 		err = r.reconcileCronJob(ctx, clusterScan, jobMeta, l)
+
 		if err != nil {
+			l.Info("error", "error", err)
+
 			return ctrl.Result{}, err
 		}
 	}
@@ -98,6 +115,8 @@ func (r *ClusterScanReconciler) reconcileJob(ctx context.Context, scan *scanv1.C
 		return err
 
 	} else if err != nil { // case where job does not exist
+
+		l.Info("error", "error", err)
 		l.Info("Creating one-off job")
 
 		err = r.submitJob(ctx, scan, meta, *job)
@@ -110,13 +129,8 @@ func (r *ClusterScanReconciler) reconcileJob(ctx context.Context, scan *scanv1.C
 		scan.Status.StartTime = metav1.Now()
 		scan.Status.Phase = "Running"
 
-		err := r.updateClusterScanStatus(ctx, scan, job)
-		if err != nil {
-			l.Error(err, "Failed to update ClusterScan status")
-			return err
-		}
-
-	} else if scan.Status.Phase != "Succeeded" { // job status updated
+	} else { // job status updated
+		l.Info("Making updates")
 		err = r.updateClusterScanStatus(ctx, scan, job)
 		if err != nil {
 			l.Error(err, "Failed to update ClusterScan status")
@@ -130,11 +144,13 @@ func (r *ClusterScanReconciler) reconcileJob(ctx context.Context, scan *scanv1.C
 func (r *ClusterScanReconciler) reconcileCronJob(ctx context.Context, scan *scanv1.ClusterScan, meta metav1.ObjectMeta, l logr.Logger) error {
 	job := &batchv1.CronJob{}
 	err := r.Get(ctx, client.ObjectKey{Name: meta.Name, Namespace: meta.Namespace}, job)
-	if err != nil && client.IgnoreNotFound(err) != nil { // case where job cannot be retrieved for  any reason
-		l.Error(err, "Something went wrong")
-		return err
 
-	} else if err != nil { // case where cron hasnt been created
+	if err != nil {
+		l.Info("error", "error", err)
+		if client.IgnoreNotFound(err) != nil { // case where job cannot be retrieved for  any reason
+			l.Error(err, "Something went wrong")
+			return err
+		} // case where cron hasnt been created
 		l.Info("Scheduling cron job")
 
 		err = r.submitCronJob(ctx, scan, meta, *job)
@@ -153,6 +169,7 @@ func (r *ClusterScanReconciler) reconcileCronJob(ctx context.Context, scan *scan
 		}
 	}
 
+	l.Info("Time to update cron clusterscan")
 	jobList := &batchv1.JobList{}
 	labelSelector := client.MatchingLabels{"clusterscan": scan.Name}
 
@@ -167,6 +184,7 @@ func (r *ClusterScanReconciler) reconcileCronJob(ctx context.Context, scan *scan
 	for _, job := range jobList.Items {
 		if job.Status.CompletionTime != nil && !job.Status.CompletionTime.Time.After(scan.Status.LastExecutionDetails.CompletionTime.Time) {
 			filteredJobs = append(filteredJobs, &job)
+
 		}
 	}
 	for _, job := range filteredJobs {
@@ -189,11 +207,11 @@ func (r *ClusterScanReconciler) submitJob(ctx context.Context, scan *scanv1.Clus
 		},
 	}
 
-	err := r.Create(ctx, &job)
-	if err != nil {
+	if err := controllerutil.SetControllerReference(scan, &job, r.Scheme); err != nil {
 		return err
 	}
-	if err := controllerutil.SetControllerReference(scan, &job, r.Scheme); err != nil {
+	err := r.Create(ctx, &job)
+	if err != nil {
 		return err
 	}
 	return nil
@@ -211,11 +229,12 @@ func (r *ClusterScanReconciler) submitCronJob(ctx context.Context, scan *scanv1.
 			},
 		},
 	}
-	err := r.Create(ctx, &job)
-	if err != nil {
+
+	if err := controllerutil.SetControllerReference(scan, &job, r.Scheme); err != nil {
 		return err
 	}
-	if err := controllerutil.SetControllerReference(scan, &job, r.Scheme); err != nil {
+	err := r.Create(ctx, &job)
+	if err != nil {
 		return err
 	}
 	return nil
@@ -241,6 +260,9 @@ func (r *ClusterScanReconciler) createPodTemplate(scan *scanv1.ClusterScan) core
 }
 
 func (r *ClusterScanReconciler) updateClusterScanStatus(ctx context.Context, scan *scanv1.ClusterScan, job *batchv1.Job) error {
+	if len(job.Status.Conditions) == 0 {
+		return nil
+	}
 	c := job.Status.Conditions[len(job.Status.Conditions)-1]
 	if batchv1.JobConditionType(c.Type) == batchv1.JobComplete && corev1.ConditionStatus(c.Status) == corev1.ConditionTrue {
 		if scan.Spec.OneOff {
@@ -280,7 +302,7 @@ func (r *ClusterScanReconciler) updateClusterScanStatus(ctx context.Context, sca
 func (r *ClusterScanReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&scanv1.ClusterScan{}).
-		Owns(&batchv1.CronJob{}).
-		Owns(&batchv1.Job{}).
+		Owns(&batchv1.CronJob{}, builder.MatchEveryOwner).
+		Owns(&batchv1.Job{}, builder.MatchEveryOwner).
 		Complete(r)
 }
