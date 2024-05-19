@@ -8,7 +8,7 @@ metadata:
 spec:
   jobType: "testing"
   image: "busybox"
-  command: ["echo", "Hello World"]
+  command: ["sh", "-c", "sleep 3 && echo 'Hello World'"] 
   # args: ["--example"]
   schedule: "0 0 * * 1" # run weekly, monday at midnight
   oneOff: true # if true, schedule can be omitted

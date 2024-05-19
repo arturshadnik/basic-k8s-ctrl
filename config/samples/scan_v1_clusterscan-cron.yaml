@@ -4,18 +4,16 @@ metadata:
   labels:
     app.kubernetes.io/name: basic-k8s-ctrl
     app.kubernetes.io/managed-by: kustomize
-  name: hello-hello
+  name: hello-alot
 spec:
   jobType: "testing"
   image: "busybox"
-  command: ["sleep", "10", "&&", "echo", "Hello World"]
+  command: ["echo", "Hello World"]
   # args: ["--example"]
-  schedule: "0 0 * * 1" # run weekly, monday at midnight
-  oneOff: true # if true, schedule can be omitted
+  schedule: "* * * * *" # run every minute
+  oneOff: false # if true, schedule can be omitted
   scanConfig:
     scanLevel: "deep"
-    targetNamespaces: "singles"
+    targetNamespaces: "default"
   startingDeadlineSeconds: 3600 # allowed waittime if scheduled time is missed
   restartPolicy: "OnFailure"
-
-
