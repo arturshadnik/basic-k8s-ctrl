@@ -58,7 +58,6 @@ type ClusterScanReconciler struct {
 
 func (r *ClusterScanReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	l := log.FromContext(ctx)
-	l.Info("In the reconciler")
 	clusterScan := &scanv1.ClusterScan{}
 
 	err := r.Get(ctx, req.NamespacedName, clusterScan)
@@ -70,8 +69,6 @@ func (r *ClusterScanReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, nil
 	}
 
-	l.Info("We got one", "scan", clusterScan.Spec.JobType)
-
 	jobName := fmt.Sprintf("%s-job", clusterScan.Name)
 	jobNamespace := clusterScan.Namespace
 
@@ -81,14 +78,11 @@ func (r *ClusterScanReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		Labels:    map[string]string{"clusterscan": clusterScan.Name},
 	}
 
-	l.Info("meta:", "name", jobName, "namespace", jobNamespace)
-
 	if clusterScan.Spec.OneOff {
 		l.Info("Reconciling One-off")
 		err = r.reconcileJob(ctx, clusterScan, jobMeta, l)
 		if err != nil {
-			l.Info("error", "error", err)
-
+			l.Error(err, "Failed to reconcile job")
 			return ctrl.Result{}, err
 		}
 
@@ -97,8 +91,7 @@ func (r *ClusterScanReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		err = r.reconcileCronJob(ctx, clusterScan, jobMeta, l)
 
 		if err != nil {
-			l.Info("error", "error", err)
-
+			l.Error(err, "Failed to reconcile job")
 			return ctrl.Result{}, err
 		}
 	}
@@ -110,13 +103,13 @@ func (r *ClusterScanReconciler) reconcileJob(ctx context.Context, scan *scanv1.C
 	job := &batchv1.Job{}
 
 	err := r.Get(ctx, client.ObjectKey{Name: meta.Name, Namespace: meta.Namespace}, job)
-	if err != nil && client.IgnoreNotFound(err) != nil { // case where job cannot be retrieved for  any reason
-		l.Error(err, "Something went wrong!")
-		return err
+	if err != nil {
+		if client.IgnoreNotFound(err) != nil { // case where job cannot be retrieved for  any reason
+			l.Error(err, "Something went wrong!")
+			return err
 
-	} else if err != nil { // case where job does not exist
-
-		l.Info("error", "error", err)
+		}
+		// case where job does not exist
 		l.Info("Creating one-off job")
 
 		err = r.submitJob(ctx, scan, meta, *job)
@@ -130,7 +123,6 @@ func (r *ClusterScanReconciler) reconcileJob(ctx context.Context, scan *scanv1.C
 		scan.Status.Phase = "Running"
 
 	} else { // job status updated
-		l.Info("Making updates")
 		err = r.updateClusterScanStatus(ctx, scan, job)
 		if err != nil {
 			l.Error(err, "Failed to update ClusterScan status")
@@ -146,7 +138,6 @@ func (r *ClusterScanReconciler) reconcileCronJob(ctx context.Context, scan *scan
 	err := r.Get(ctx, client.ObjectKey{Name: meta.Name, Namespace: meta.Namespace}, job)
 
 	if err != nil {
-		l.Info("error", "error", err)
 		if client.IgnoreNotFound(err) != nil { // case where job cannot be retrieved for  any reason
 			l.Error(err, "Something went wrong")
 			return err
@@ -169,7 +160,6 @@ func (r *ClusterScanReconciler) reconcileCronJob(ctx context.Context, scan *scan
 		}
 	}
 
-	l.Info("Time to update cron clusterscan")
 	jobList := &batchv1.JobList{}
 	labelSelector := client.MatchingLabels{"clusterscan": scan.Name}
 
