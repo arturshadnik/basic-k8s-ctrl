@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -87,7 +86,6 @@ func (r *ClusterScanReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	} else {
 		err = r.reconcileCronJob(ctx, clusterScan, jobMeta, l)
-
 		if err != nil {
 			l.Error(err, "Failed to reconcile job")
 			return ctrl.Result{}, err
@@ -105,10 +103,8 @@ func (r *ClusterScanReconciler) reconcileJob(ctx context.Context, scan *scanv1.C
 		if client.IgnoreNotFound(err) != nil { // case where job cannot be retrieved for  any reason
 			l.Error(err, "Something went wrong!")
 			return err
-
 		}
 		// case where job does not exist
-
 		err = r.submitJob(ctx, scan, meta, *job)
 		if err != nil {
 			l.Error(err, "Failed to submit job")
@@ -116,9 +112,7 @@ func (r *ClusterScanReconciler) reconcileJob(ctx context.Context, scan *scanv1.C
 		}
 		l.Info("Started Job")
 
-		scan.Status.StartTime = metav1.Now()
-		scan.Status.Phase = "Running"
-		err = r.Status().Update(ctx, scan)
+		err = r.initializeScanStatus(ctx, scan)
 		if err != nil {
 			return err
 		}
@@ -126,7 +120,7 @@ func (r *ClusterScanReconciler) reconcileJob(ctx context.Context, scan *scanv1.C
 	} else { // job status updated
 		err = r.updateClusterScanStatus(ctx, scan, job)
 		if err != nil {
-			l.Error(err, "Failed to update ClusterScan status")
+			l.Error(err, "Failed to initialize ClusterScan status")
 			return err
 		}
 		l.Info("Updated ClusterScan", "startedAt", scan.Status.StartTime.Time.GoString(), "scanStatus", scan.Status.Phase)
@@ -150,53 +144,64 @@ func (r *ClusterScanReconciler) reconcileCronJob(ctx context.Context, scan *scan
 		}
 		l.Info("Cron Scheduled")
 
-		scan.Status.Phase = "Scheduled"
-		scan.Status.StartTime = metav1.Now()
-		scan.Status.LastExecutionDetails = scanv1.ExecutionDetails{
-			CompletionTime: metav1.Now(),
-			StartTime:      metav1.Now(),
-			Result:         "dummy",
-		}
-		err = r.Status().Update(ctx, scan)
+		err = r.initializeScanStatus(ctx, scan)
 		if err != nil {
-			log.Log.Error(err, "Failed to update ClusterScan status")
+			log.Log.Error(err, "Failed to initialize ClusterScan status")
 			return err
 		}
 	}
+
 	jobList := &batchv1.JobList{}
 	labelSelector := client.MatchingLabels{"clusterscan": scan.Name}
 
 	err = r.Client.List(ctx, jobList, labelSelector)
 	if err != nil {
-		log.Log.Error(err, "Failed to update ClusterScan status")
+		log.Log.Error(err, "Failed to fetch job status")
 		return err
 	}
-	l.Info("NumJobs", "num", len(jobList.Items))
+
 	filteredJobs := []*batchv1.Job{}
-	// filter jobs that are already accounted for, using CompletionTime
+	// filter out jobs that are already accounted for, using StartTime
 	for _, job := range jobList.Items {
-		if job.Status.CompletionTime != nil && !job.Status.StartTime.Time.After(scan.Status.LastExecutionDetails.StartTime.Time) {
-			l.Info("Time", "job-time", job.Status.StartTime.GoString(), "scan-time", scan.Status.LastExecutionDetails.StartTime.Time.GoString())
+		if job.Status.StartTime != nil && job.Status.StartTime.Time.After(scan.Status.LastExecutionDetails.StartTime.Time) {
+			l.Info("DEBUG", "jobTIme", job.Status.StartTime.Time.GoString(), "scanTime", scan.Status.LastExecutionDetails.StartTime.Time.GoString())
 			filteredJobs = append(filteredJobs, &job)
 		}
 	}
-	// TODO check why the HECK these never update properly, could be the time check above. Step 0, check length
 	for _, job := range filteredJobs {
 		err = r.updateClusterScanStatus(ctx, scan, job)
 		if err != nil {
-			log.Log.Error(err, "Failed to update ClusterScan status")
+			l.Error(err, "Failed to update ClusterScan status")
 			return err
 		}
-		l.Info(fmt.Sprintf("Added %v Cron results to ClusterScan", len(filteredJobs)))
+		l.Info("Current State", "completed", scan.Status.Succeeded, "failed", scan.Status.Failed)
 	}
 	return nil
+}
+
+func (r *ClusterScanReconciler) initializeScanStatus(ctx context.Context, scan *scanv1.ClusterScan) error {
+	scan.Status.StartTime = metav1.Now()
+	// scan.Status.Succeeded = 0
+	// scan.Status.Failed = 0
+	scan.Status.LastExecutionDetails = scanv1.ExecutionDetails{
+		CompletionTime: metav1.Now(),
+		StartTime:      metav1.Now(),
+		Result:         "nil",
+	}
+
+	if scan.Spec.OneOff {
+		scan.Status.Phase = "Running"
+	} else {
+		scan.Status.Phase = "Scheduled"
+	}
+	return r.Status().Update(ctx, scan)
 }
 
 func (r *ClusterScanReconciler) submitJob(ctx context.Context, scan *scanv1.ClusterScan, meta metav1.ObjectMeta, job batchv1.Job) error {
 	job = batchv1.Job{
 		ObjectMeta: meta,
 		Spec: batchv1.JobSpec{
-			Template:     r.createPodTemplate(scan),
+			Template:     createPodTemplate(scan),
 			BackoffLimit: ptr.To(int32(1)),
 		},
 	}
@@ -218,7 +223,7 @@ func (r *ClusterScanReconciler) submitCronJob(ctx context.Context, scan *scanv1.
 			Schedule: scan.Spec.Schedule,
 			JobTemplate: batchv1.JobTemplateSpec{
 				Spec: batchv1.JobSpec{
-					Template: r.createPodTemplate(scan),
+					Template: createPodTemplate(scan),
 				},
 			},
 		},
@@ -234,7 +239,7 @@ func (r *ClusterScanReconciler) submitCronJob(ctx context.Context, scan *scanv1.
 	return nil
 }
 
-func (r *ClusterScanReconciler) createPodTemplate(scan *scanv1.ClusterScan) corev1.PodTemplateSpec {
+func createPodTemplate(scan *scanv1.ClusterScan) corev1.PodTemplateSpec {
 	return corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{"clusterscan": scan.Name},
@@ -268,7 +273,7 @@ func (r *ClusterScanReconciler) updateClusterScanStatus(ctx context.Context, sca
 			// only update when the job happened after the last recorded one
 			scan.Status.LastExecutionDetails = scanv1.ExecutionDetails{
 				StartTime:      *job.Status.StartTime,
-				CompletionTime: c.LastTransitionTime,
+				CompletionTime: *job.Status.CompletionTime,
 				Result:         "Succeeded",
 			}
 		}
@@ -296,7 +301,7 @@ func (r *ClusterScanReconciler) updateClusterScanStatus(ctx context.Context, sca
 func (r *ClusterScanReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&scanv1.ClusterScan{}).
-		Owns(&batchv1.CronJob{}, builder.MatchEveryOwner).
-		Owns(&batchv1.Job{}, builder.MatchEveryOwner).
+		Owns(&batchv1.CronJob{}).
+		Owns(&batchv1.Job{}).
 		Complete(r)
 }
