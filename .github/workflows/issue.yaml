@@ -16,7 +16,7 @@ jobs:
       - name: Filter labels
         id: filter_labels
         run: |
-          LABELS=$(echo '${{ toJson(github.event.issue.labels) }}' | jq -r '[.[] | select(.name != "plugin-copy") | .name]')
+          LABELS=$(echo '${{ toJson(github.event.issue.labels) }}' | jq -r '[.[] | select(.name != "test-copy") | .name]')
           echo "::set-output name=labels::$LABELS"
       - name: Create Issue
         uses: dacbd/create-issue-action@main
