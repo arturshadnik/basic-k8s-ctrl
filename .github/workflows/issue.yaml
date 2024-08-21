@@ -6,7 +6,7 @@ on:
 
 jobs:
   create-issue:
-    if: contains(github.event.issues.labels.*.name, 'test-copy')
+    if: contains(github.event.issue.labels.*.name, 'test-copy')
     runs-on: ubuntu-latest
     steps:
       - name: Create Issue
