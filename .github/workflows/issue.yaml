@@ -1,0 +1,25 @@
+name: Create Issue
+
+on: 
+  issues:
+    types: [opened]
+
+concurrency: 
+  group: create-issue-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  create-issue:
+    if: contains(github.event.issues.labels.*.name, 'test-copy')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Issue
+        uses: dacbd/create-issue-action@main
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          title: (github.event.issue.title)
+          body: (github.event.issue.body)
+          owner: arturshadnik
+          repo: gsc
+          assignees: (github.event.issue.assignees.*.login)
+          labels: (github.event.issue.labels.*.name)
