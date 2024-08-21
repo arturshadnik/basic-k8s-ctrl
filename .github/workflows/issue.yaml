@@ -2,7 +2,7 @@ name: Create Issue
 
 on: 
   issues:
-    types: [opened]
+    types: [opened, labeled]
 
 concurrency: 
   group: create-issue-${{ github.ref }}
@@ -22,4 +22,4 @@ jobs:
           owner: arturshadnik
           repo: gsc
           assignees: ${{ join(github.event.issue.assignees.*.login, ',') }}
-          labels: ${{ join(github.event.issue.labels.*.name, ',') }}
+          labels: ${{ join(fromJSON(toJSON(github.event.issue.labels.*.name)) | filter(l => l != 'test-copy') | concat(['new-label']), ',') }}
