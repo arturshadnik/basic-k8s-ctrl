@@ -17,9 +17,9 @@ jobs:
         uses: dacbd/create-issue-action@main
         with:
           token: ${{ secrets.GH_TOKEN }}
-          title: (github.event.issue.title)
-          body: (github.event.issue.body)
+          title: ${{ github.event.issue.title }}
+          body: ${{ github.event.issue.body }}
           owner: arturshadnik
           repo: gsc
-          assignees: (github.event.issue.assignees.*.login)
-          labels: (github.event.issue.labels.*.name)
+          assignees: ${{ join(github.event.issue.assignees.*.login, ',') }}
+          labels: ${{ join(github.event.issue.labels.*.name, ',') }}
