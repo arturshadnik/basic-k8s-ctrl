@@ -27,7 +27,7 @@ jobs:
         id: create_issue
         uses: dacbd/create-issue-action@main
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GH_TOKEN }}
           title: ${{ github.event.issue.title }}
           body: ${{ github.event.issue.body }}
           owner: arturshadnik
