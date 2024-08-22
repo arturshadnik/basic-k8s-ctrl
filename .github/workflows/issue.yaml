@@ -18,11 +18,19 @@ jobs:
     if: contains(github.event.issue.labels.*.name, 'test-copy')
     runs-on: ubuntu-latest
     steps:
-      - name: Filter labels
-        id: filter_labels
+      - name: Read Labels
+        id: read_labels
         run: |
-          LABELS=$(echo '${{ toJson(github.event.issue.labels) }}' | jq -r '[.[] | select(.name != env.LABEL_NAME) | .name] | join(",")')
+          echo "labels=${{ toJson(github.event.issue.labels) }}" >> $GITHUB_OUTPUT
+
+      - name: Filter Labels
+        id: filter_labels
+        env:
+          LABEL_NAME: test-copy
+        run: |
+          LABELS=$(echo "${{ steps.read_labels.outputs.labels }}" | jq -r '[.[] | select(.name != env.LABEL_NAME) | .name] | join(",")')
           echo "labels=$LABELS" >> $GITHUB_OUTPUT
+
       - name: Create Issue
         id: create_issue
         uses: dacbd/create-issue-action@main
@@ -34,11 +42,13 @@ jobs:
           repo: gsc
           assignees: ${{ join(github.event.issue.assignees.*.login, ',') }}
           labels: ${{ steps.filter_labels.outputs.labels }}
+
       - name: Get Issue ID
         id: get_issue_id
         run: |
           ISSUE_ID=$(echo '${{ steps.create_issue.outputs.json }}' | jq -r .node_id)
           echo "issue_id=$ISSUE_ID" >> $GITHUB_OUTPUT
+      
       - name: Create Project Card
         id: create_project_card
         run: |
