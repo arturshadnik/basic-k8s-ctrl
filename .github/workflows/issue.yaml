@@ -18,17 +18,10 @@ jobs:
     if: contains(github.event.issue.labels.*.name, 'test-copy')
     runs-on: ubuntu-latest
     steps:
-      - name: Read Labels
-        id: read_labels
-        run: |
-          read -r -d '' JSON <<EOF || true
-          ${{ toJson(github.event.issue.labels) }}
-          EOF
-          echo "labels=$JSON" >> $GITHUB_OUTPUT
       - name: Filter labels
         id: filter_labels
         run: |
-          LABELS=$(echo "${{ steps.read_labels.outputs.labels }}" | jq -r '[.[] | select(.name != "${{ env.LABEL_NAME }}") | .name] | join(",")')
+          LABELS=$(echo '${{ toJson(github.event.issue.labels) }}' | jq -r '[.[] | select(.name != env.LABEL_NAME) | .name] | join(",")')
           echo "labels=$LABELS" >> $GITHUB_OUTPUT
       - name: Create Issue
         id: create_issue
