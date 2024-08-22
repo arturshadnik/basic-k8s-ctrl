@@ -39,18 +39,18 @@ jobs:
         run: |
           ISSUE_ID=$(echo '${{ steps.create_issue.outputs.json }}' | jq -r .node_id)
           echo "issue_id=$ISSUE_ID" >> $GITHUB_OUTPUT
-      - name: Create Card
-        id: create_card
+      - name: Create Project Card
+        id: create_project_card
         run: |
           curl --request POST \
             --url https://api.github.com/graphql \
             --header 'Authorization: Bearer ${{ secrets.GH_TOKEN }}' \
-            --data '{"query":"mutation {addProjectV2ItemById(input: {projectId: \"${{ env.COLUMN_ID }}\" contentId: \"${{ steps.get_issue_id.outputs.issue_id }}\"}) {item {id}}}"}'
-      - name: Get Card ID
-        id: get_card_id
-        run: |
-          CARD_ID=$(echo '${{ steps.create_card.outputs.json }}' | jq -r .data.addProjectV2ItemById.item.id)
-          echo "card_id=$CARD_ID" >> $GITHUB_OUTPUT
+            --data '{"query":"mutation {addProjectV2ItemById(input: {projectId: \"${{ env.COLUMN_ID }}\" contentId: \"${{ steps.get_issue_id.outputs.issue_id }}\"}) {item {id}}}"}' 
+      # - name: Get Card ID
+      #   id: get_card_id
+      #   run: |
+      #     CARD_ID=$(echo '${{ steps.create_project_card.outputs.json }}' | jq -r .data.addProjectV2ItemById.item.id)
+      #     echo "card_id=$CARD_ID" >> $GITHUB_OUTPUT
       # - name: Move Card
       #   id: move_card
       #   run: |
@@ -59,4 +59,5 @@ jobs:
       #     -H "Accept: application/vnd.github+json" \
       #     -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
       #     -H "X-GitHub-Api-Version: 2022-11-28" \
+      #     -d '{"card_id":"'${{ steps.get_card_id.outputs.card_id }}'","position":"after: "}' \
       #     https://api.github.com/projects/columns/${{ env.COLUMN_ID }}/cards/${{ steps.get_card_id.outputs.card_id }}/moves
