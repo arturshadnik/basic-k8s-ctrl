@@ -21,9 +21,9 @@ jobs:
       - name: Filter labels
         id: filter_labels
         run: |
-          LABELS=$(cat <<EOF | jq -r --arg label_name "${{ env.LABEL_NAME }}" '[.[] | select(.name != $label_name) | .name] | join(",")'
-            ${{ toJson(github.event.issue.labels) }}
-            EOF
+          LABELS=$(cat <<EOF | jq -r --arg label_name "${{ env.LABEL_NAME }}" '[.[] | select(.name != $label_name) | .name] | join(",")' \
+            ${{ toJson(github.event.issue.labels) }} \
+            EOF \
           )   
           echo "labels=$LABELS" >> $GITHUB_OUTPUT
       - name: Create Issue
