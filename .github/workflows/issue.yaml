@@ -21,9 +21,10 @@ jobs:
       - name: Read Labels
         id: read_labels
         run: |
-          read -r -d '' JSON <<EOF
+          JSON=$(cat <<EOF
           ${{ toJson(github.event.issue.labels) }}
           EOF
+          )
           echo "labels=$JSON" >> $GITHUB_OUTPUT
       - name: Filter labels
         id: filter_labels
