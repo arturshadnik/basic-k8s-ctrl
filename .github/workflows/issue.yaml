@@ -37,7 +37,8 @@ jobs:
       - name: Get Issue ID
         id: get_issue_id
         run: |
-          echo "issue_id=${{ steps.create_issue.outputs.json }} | jq .id" >> $GITHUB_OUTPUT
+          ISSUE_ID=$(echo '${{ steps.create_issue.outputs.json }}' | jq -r .node_id)
+          echo "issue_id=$ISSUE_ID" >> $GITHUB_OUTPUT
       - name: Create Card
         id: create_card
         run: |
@@ -48,7 +49,8 @@ jobs:
       - name: Get Card ID
         id: get_card_id
         run: |
-          echo "card_id=${{ steps.create_card.outputs.card_id }}" >> $GITHUB_OUTPUT
+          CARD_ID=$(echo '${{ steps.create_card.outputs.json }}' | jq -r .data.addProjectV2ItemById.item.id)
+          echo "card_id=$CARD_ID" >> $GITHUB_OUTPUT
       # - name: Move Card
       #   id: move_card
       #   run: |
