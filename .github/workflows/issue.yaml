@@ -31,20 +31,26 @@ jobs:
       #     LABELS=$(echo "${{ steps.read_labels.outputs.labels }}" | jq -r '[.[] | select(.name != env.LABEL_NAME) | .name] | join(",")')
       #     echo "labels=$LABELS" >> $GITHUB_OUTPUT
       - name: Filter Labels
+        uses: actions/github-script@v6
         id: filter_labels
-        run: |
-          const fs = require('fs');
+        env:
+          LABELS_JSON: ${{ toJson(github.event.issue.labels) }}
+          LABEL_NAME: ${{ env.LABEL_NAME }}
+          GITHUB_OUTPUT: $GITHUB_OUTPUT
+        with: 
+          script: |
+            const fs = require('fs');
 
-          const labels = JSON.parse(process.env.LABELS_JSON);
-          const labelToExclude = process.env.LABEL_NAME;
+            const labels = JSON.parse(process.env.LABELS_JSON);
+            const labelToExclude = process.env.LABEL_NAME;
 
-          const filteredLabels = labels
-            .filter(label => label.name !== labelToExclude)
-            .map(label => label.name);
+            const filteredLabels = labels
+              .filter(label => label.name !== labelToExclude)
+              .map(label => label.name);
 
-          console.log(`labels=${filteredLabels.join(',')}`);
-          fs.appendFileSync(process.env.GITHUB_OUTPUT, `labels=${filteredLabels.join(',')}\n`);
-        shell: node
+            console.log(`labels=${filteredLabels.join(',')}`);
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `labels=${filteredLabels.join(',')}\n`);
+          result-encoding: string
       - name: Create Issue
         id: create_issue
         uses: dacbd/create-issue-action@main
