@@ -54,10 +54,13 @@ jobs:
       - name: Get Issue ID
         id: get_issue_id
         uses: actions/github-script@v6
+        env:
+          ISSUE_JSON: ${{ steps.create_issue.outputs.json }}
         with:
           script: |
+            console.log(process.env.ISSUE_JSON);
             const fs = require('fs');
-            const issueJson = JSON.parse(process.env['steps.create_issue.outputs.json']);
+            const issueJson = JSON.parse(process.env.ISSUE_JSON);
             fs.appendFileSync(process.env.GITHUB_OUTPUT, `issue_id=${issueJson.node_id}\n`);
           result-encoding: string
 
