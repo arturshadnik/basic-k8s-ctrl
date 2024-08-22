@@ -18,19 +18,33 @@ jobs:
     if: contains(github.event.issue.labels.*.name, 'test-copy')
     runs-on: ubuntu-latest
     steps:
-      - name: Read Labels
-        id: read_labels
-        run: |
-          echo "labels=${{ toJson(github.event.issue.labels) }}" >> $GITHUB_OUTPUT
+      # - name: Read Labels
+      #   id: read_labels
+      #   run: |
+      #     echo "labels=${{ toJson(github.event.issue.labels) }}" >> $GITHUB_OUTPUT
 
+      # - name: Filter Labels
+      #   id: filter_labels
+      #   env:
+      #     LABEL_NAME: test-copy
+      #   run: |
+      #     LABELS=$(echo "${{ steps.read_labels.outputs.labels }}" | jq -r '[.[] | select(.name != env.LABEL_NAME) | .name] | join(",")')
+      #     echo "labels=$LABELS" >> $GITHUB_OUTPUT
       - name: Filter Labels
         id: filter_labels
-        env:
-          LABEL_NAME: test-copy
         run: |
-          LABELS=$(echo "${{ steps.read_labels.outputs.labels }}" | jq -r '[.[] | select(.name != env.LABEL_NAME) | .name] | join(",")')
-          echo "labels=$LABELS" >> $GITHUB_OUTPUT
+          const fs = require('fs');
 
+          const labels = JSON.parse(process.env.LABELS_JSON);
+          const labelToExclude = process.env.LABEL_NAME;
+
+          const filteredLabels = labels
+            .filter(label => label.name !== labelToExclude)
+            .map(label => label.name);
+
+          console.log(`labels=${filteredLabels.join(',')}`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `labels=${filteredLabels.join(',')}\n`);
+        shell: node
       - name: Create Issue
         id: create_issue
         uses: dacbd/create-issue-action@main
