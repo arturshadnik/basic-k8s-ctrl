@@ -21,9 +21,7 @@ jobs:
       - name: Filter labels
         id: filter_labels
         run: |
-          read -r -d '' JSON <<EOF
-          ${{ toJson(github.event.issue.labels) }}
-          EOF
+          JSON=$(echo '${{ toJson(github.event.issue.labels) }}')
           LABELS="$(echo "$JSON" | jq -r '[.[] | select(.name != "${{ env.LABEL_NAME }}") | .name] | join(",")')"
           echo "labels=$LABELS" >> $GITHUB_OUTPUT
       - name: Create Issue
