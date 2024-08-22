@@ -57,7 +57,7 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            console.log('${{ steps.create_issue.outputs.json }}');
+            const fs = require('fs');
             fs.appendFileSync(process.env.GITHUB_OUTPUT, `issue_id=${JSON.parse('${{ steps.create_issue.outputs.json }}').node_id}\n`);
           result-encoding: string
 
