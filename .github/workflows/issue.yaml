@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  COLUMN_ID: 1
+  COLUMN_ID: ${{ secrets.PROJECT_ID }}
   LABEL_NAME: test-copy
 
 jobs:
