@@ -9,21 +9,17 @@ concurrency:
   group: create-issue-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  COLUMN_ID: ${{ secrets.PROJECT_ID }}
-  LABEL_NAME: test-copy
-
 jobs:
   create-issue:
     if: contains(github.event.issue.labels.*.name, 'test-copy')
     runs-on: ubuntu-latest
     steps:
       - name: Filter Labels
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         id: filter_labels
         env:
           LABELS_JSON: ${{ toJson(github.event.issue.labels) }}
-          LABEL_NAME: ${{ env.LABEL_NAME }}
+          LABEL_NAME: test-copy
         with: 
           script: |
             const fs = require('fs');
@@ -35,7 +31,6 @@ jobs:
               .filter(label => label.name !== labelToExclude)
               .map(label => label.name);
 
-            console.log(`labels=${filteredLabels.join(',')}`);
             fs.appendFileSync(process.env.GITHUB_OUTPUT, `labels=${filteredLabels.join(',')}\n`);
           result-encoding: string
 
@@ -53,12 +48,11 @@ jobs:
 
       - name: Get Issue ID
         id: get_issue_id
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         env:
           ISSUE_JSON: ${{ steps.create_issue.outputs.json }}
         with:
           script: |
-            console.log(process.env.ISSUE_JSON);
             const fs = require('fs');
             const issueJson = JSON.parse(process.env.ISSUE_JSON);
             fs.appendFileSync(process.env.GITHUB_OUTPUT, `issue_id=${issueJson.node_id}\n`);
@@ -70,4 +64,4 @@ jobs:
           curl --request POST \
             --url https://api.github.com/graphql \
             --header 'Authorization: Bearer ${{ secrets.GH_TOKEN }}' \
-            --data '{"query":"mutation {addProjectV2ItemById(input: {projectId: \"${{ env.COLUMN_ID }}\" contentId: \"${{ steps.get_issue_id.outputs.issue_id }}\"}) {item {id}}}"}' 
+            --data '{"query":"mutation {addProjectV2ItemById(input: {projectId: \"${{ secrets.PROJECT_ID }}\" contentId: \"${{ steps.get_issue_id.outputs.issue_id }}\"}) {item {id}}}"}' 
